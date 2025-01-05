@@ -1,0 +1,44 @@
+name: Merge M3U Files
+
+on:
+  push:
+    branches:
+      - main  # 你可以修改为需要触发的分支
+  schedule:
+    - cron: '0 0 * * *'  # 每天 00:00 定时触发，可以根据需求调整
+  workflow_dispatch:  # 手动触发
+
+jobs:
+  merge-m3u:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Create merged directory if not exists
+        run: mkdir -p merged
+
+      - name: Find and merge M3U files in origin directory
+        run: |
+          output_file="merged/merged.m3u"
+          echo "#EXTM3U" > $output_file  # 添加 M3U 文件头部
+
+          # 仅合并 origin 目录下的 .m3u 文件（不包含子目录）
+          for file in origin/*.m3u; do
+            if [ -f "$file" ]; then
+              echo "Merging $file..."
+              cat "$file" >> $output_file
+              echo "" >> $output_file  # 添加换行分隔
+            fi
+          done
+
+      - name: Commit and push merged file
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add merged/merged.m3u
+          git commit -m "Auto-merged M3U files"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
