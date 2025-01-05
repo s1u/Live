@@ -1,0 +1,70 @@
+name: Merge M3U Files
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * *'  # 每天运行一次
+  workflow_dispatch:      # 允许手动触发
+
+jobs:
+  merge-m3u:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+          
+      - name: Create merge script
+        run: |
+          cat > merge_m3u.py << 'EOL'
+          import glob
+          import os
+          
+          def merge_m3u_files():
+              # 获取所有 m3u 文件
+              m3u_files = glob.glob('**/*.m3u', recursive=True)
+              
+              # 创建输出目录
+              os.makedirs('output', exist_ok=True)
+              
+              # 用于存储所有唯一的行
+              unique_lines = set()
+              
+              # 读取所有文件
+              for file_path in m3u_files:
+                  with open(file_path, 'r', encoding='utf-8') as f:
+                      lines = f.readlines()
+                      for line in lines:
+                          line = line.strip()
+                          if line and not line.startswith('#'):
+                              unique_lines.add(line)
+              
+              # 写入合并后的文件
+              with open('output/merged.m3u', 'w', encoding='utf-8') as f:
+                  f.write('#EXTM3U\n')  # 添加 m3u 文件头
+                  for line in sorted(unique_lines):
+                      f.write(f'{line}\n')
+              
+              print(f'Successfully merged {len(m3u_files)} files.')
+              print(f'Total unique entries: {len(unique_lines)}')
+          
+          if __name__ == '__main__':
+              merge_m3u_files()
+          EOL
+          
+      - name: Merge M3U files
+        run: python merge_m3u.py
+        
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add output/merged.m3u
+          git commit -m "Update merged M3U file" || exit 0
+          git push
