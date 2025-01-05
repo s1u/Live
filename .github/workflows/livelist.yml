@@ -1,12 +1,9 @@
 name: Merge M3U Files
 
 on:
-  # push:
-    # branches:
-      # - main  # 你可以修改为需要触发的分支
+  workflow_dispatch:  # 支持手动触发
   schedule:
-    - cron: '0 0 * * *'  # 每天 00:00 定时触发，可以根据需求调整
-  workflow_dispatch:  # 手动触发
+    - cron: 0 1 1 * *  # 每月1号1点定时触发
 
 jobs:
   merge-m3u:
